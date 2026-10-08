@@ -2,7 +2,7 @@
 const TraderDetailModal = {
   popupSelector: ".pricing-popup-main:not(.creator-popup-main)",
   popupClass: "pricing-popup-main",
-  generateMatchRows: function (matchHistory) {
+  generateMatchRows: function (matchHistory, leagueId) {
     if (
       !matchHistory ||
       !Array.isArray(matchHistory) ||
@@ -89,6 +89,15 @@ const TraderDetailModal = {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         })}`;
+        const compareBalances = ["open1", "open2", "creator_league_2"].includes(leagueId);
+        const userBalColor = compareBalances
+          ? userBalNum === oppBalNum
+            ? "#8b8582"
+            : userBalNum < oppBalNum ? "#ef4444" : "#03dc5d"
+          : userBalPositive ? "#03dc5d" : "#ef4444";
+        const oppBalColor = compareBalances
+          ? "#8b8582"
+          : oppBalPositive ? "#8b8582" : "#ab623e";
         let ptsRaw =
           m.points !== undefined && m.points !== null
             ? m.points
@@ -117,7 +126,7 @@ const TraderDetailModal = {
 <div class="creators-table-col match"><div class="creators-table-box track-table"><div class="creators-table-box-rank gray-col">${escapeHtml(matchNum)}</div></div></div>
 <div class="creators-table-col opponent"><div class="creators-table-box track-table"><div class="oppnt-box"><div class="oppnt-crcl ${oppColor}"></div><div class="creators-table-box-count track-table">${escapeHtml(oppName)}</div></div></div></div>
 <div class="creators-table-col result"><div class="creators-table-box track-table"><div class="in-progs ${resultClass}"><div class="in-progs-txt">${escapeHtml(resultText)}</div></div></div></div>
-<div class="creators-table-col finals"><div class="creators-table-box track-table rgt"><div class="creators-table-box-count fnl-track-table"><span class="fnl-bal-left" style="color: ${userBalPositive ? "#03dc5d" : "#ef4444"};">${escapeHtml(userBal)}</span> <span class="fnl-bal-left-mid">vs</span> <span class="fnl-bal-rgt" style="color: ${oppBalPositive ? "#8b8582" : "#ab623e"};">${escapeHtml(oppBal)}</span></div></div></div>
+<div class="creators-table-col finals"><div class="creators-table-box track-table rgt"><div class="creators-table-box-count fnl-track-table"><span class="fnl-bal-left" style="color: ${userBalColor};">${escapeHtml(userBal)}</span> <span class="fnl-bal-left-mid">vs</span> <span class="fnl-bal-rgt" style="color: ${oppBalColor};">${escapeHtml(oppBal)}</span></div></div></div>
 <div class="creators-table-col final-points"><div class="creators-table-box track-table rgt"><div class="creators-table-box-count points-track-table ${!ptsPositive ? "red" : ""}" style="${!ptsPositive ? "color: #ef4444;" : ""}">${escapeHtml(pts)}</div></div></div>
 </div>
 `;
@@ -425,7 +434,7 @@ const TraderDetailModal = {
       : getFlag(user.country);
     const flagHtml = `<img src="${escapeHtml(flagImgUrl)}" loading="lazy" sizes="100vw" alt="${escapeHtml(countryName)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
 
-    const matchRowsHTML = this.generateMatchRows(matchHistory);
+    const matchRowsHTML = this.generateMatchRows(matchHistory, apiConfig.id);
 
     return `
 <div class="pricing-popup-wrp">
@@ -590,7 +599,7 @@ ${creator ? "" : `<div class="live-match-table-head-left rgt">${escapeHtml(leagu
   </div>
 </div>
 <div class="creators-table-body track-tbl-bd">
-  ${matchRowsHTML || (creator ? '<div class="empty-state-text creator-empty-state-msg">No match history available.</div>' : "")}
+  ${matchRowsHTML || '<div class="empty-state-text creator-empty-state-msg">No match history available.</div>'}
 </div>
 </div>
 </div>
@@ -905,14 +914,15 @@ const PTL_CONFIG = {
       enableTraderModal: true,
       highlightRowCount: 4,
       show_highlight: true,
-      ap_url: `${API_BASE_URL}/app/v1/journal/ptl/open2/leaderboard/public/`,
+      ap_url: `https://api-u.tradeify.co/app/v1/journal/ptl/open2/leaderboard/public/`,
+      // ap_url: `${API_BASE_URL}/app/v1/journal/ptl/open1/leaderboard/public/`,
       demo_data:
         typeof PTL_DEMO_DATA !== "undefined" ? PTL_DEMO_DATA.open2 : null,
       demo_individual_data:
         typeof PTL_DEMO_DATA !== "undefined"
           ? PTL_DEMO_DATA.creator_league_2_individual_data
           : null,
-      coming_soon: true, // Toggle switch: true = show Coming Soon box, false = show normal table
+      coming_soon: false, // Toggle switch: true = show Coming Soon box, false = show normal table
       coming_soon_title: "Coming Soon",
       coming_soon_desc: "The game will begins on 26th October",
       use_api: true, // Toggle switch: true = API, false = static demo data
@@ -1387,8 +1397,8 @@ function createRowHTML(item, globalIndex, tabIndex, pageIndex) {
   }
 
   const highlightRowCount = PTL_CONFIG.apis[tabIndex].highlightRowCount;
-  // Use the user's rank, independent of filtering, pagination, or row order.
-  const highlightRank = Number(item.rank);
+  // Match the displayed/reward rank, including the fallback when API rank is missing.
+  const highlightRank = Number(rankNum);
   const isRunnerUp =
     !eliminated &&
     Number.isInteger(highlightRank) &&

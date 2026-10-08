@@ -1,3 +1,6 @@
+.creators-table {
+  background-color: rgba(0, 0, 0, 0.3);
+}
 .pricing-popup-wrp::-webkit-scrollbar {
   width: 10px;
 }
@@ -1250,7 +1253,7 @@ color: inherit !important;
 .ptl-leaderboard-controls {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 24px;
@@ -1346,7 +1349,7 @@ color: inherit !important;
   display: none;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 667px) {
   .ptl-leaderboard-controls .input-search-wrp {
     flex-basis: 100%;
     max-width: none;
@@ -1378,11 +1381,13 @@ color: inherit !important;
   display: none;
 }
 
-.creators-table.open1 .creators-table-tag-txt.finale-seat-label {
+.creators-table.open1 .creators-table-tag-txt.finale-seat-label,
+.creators-table.open2 .creators-table-tag-txt.finale-seat-label {
   display: inline-block;
 }
 
-.creators-table.open1 .creators-table-tag-txt.finale-prize-label {
+.creators-table.open1 .creators-table-tag-txt.finale-prize-label,
+.creators-table.open2 .creators-table-tag-txt.finale-prize-label {
   display: none;
 }
 
