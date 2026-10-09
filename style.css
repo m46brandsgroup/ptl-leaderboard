@@ -1,3 +1,9 @@
+.pricing-popup-top-left-head-txt.no-team {
+  display: none;
+}
+.ptl-filter[data-filter="company"] {
+  display: none;
+}
 .creators-table {
   background-color: rgba(0, 0, 0, 0.3);
 }
@@ -1391,9 +1397,9 @@ color: inherit !important;
   display: none;
 }
 
-.pricing-popup-top-left-cont .pricing-popup-top-left-head-txt {
+/* .pricing-popup-top-left-cont .pricing-popup-top-left-head-txt {
   display: none;
-}
+} */
 
 .creators-table.creator .creator-points-info {
   display: none;
@@ -1423,11 +1429,94 @@ pointer-events: none;
   padding: 20px;
   color: #939393;
 }
-.creators-table-tag.popup-tag.eleminated{
+.creators-table-tag.popup-tag.eleminated {
   color: #ff6b6b;
-  background-color: rgba(255, 107, 107,0.08);
-  border: 1px solid rgba(255, 107, 107,0.24);
+  background-color: rgba(255, 107, 107, 0.08);
+  border: 1px solid rgba(255, 107, 107, 0.24);
 }
-.creators-table-tag.popup-tag.eleminated img{
-display: none;
+.creators-table-tag.popup-tag.eleminated img {
+  display: none;
+}
+
+/* Open league tables: Company follows Trader in headers and rows. */
+.creators-table-main:has(> .creators-table:is(.open1, .open2)) {
+  overflow-x: auto;
+}
+
+.creators-table:is(.open1, .open2) {
+  min-width: 1040px;
+}
+
+.creators-table:is(.open1, .open2) .creators-table-col {
+  flex-shrink: 0;
+}
+
+.creators-table:is(.open1, .open2) .creators-table-col.rank {
+  width: 8%;
+}
+.creators-table:is(.open1, .open2) .creators-table-col.trader {
+  width: 20%;
+}
+.creators-table:is(.open1, .open2) .creators-table-col.company {
+  width: 16%;
+}
+.creators-table:is(.open1, .open2) .creators-table-col.points {
+  width: 10%;
+}
+.creators-table:is(.open1, .open2) .creators-table-col.matches {
+  width: 12%;
+}
+.creators-table:is(.open1, .open2) .creators-table-col.total {
+  width: 15%;
+}
+.creators-table:is(.open1, .open2) .creators-table-col.reward {
+  width: 19%;
+}
+
+.creators-table:is(.open1, .open2)
+  .creators-table-col.company
+  .creators-table-box-count {
+  overflow-wrap: anywhere;
+}
+
+.creators-table:is(.open1, .open2) .ptl-company {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.creators-table:is(.open1, .open2) .ptl-company-logo {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.creators-table:is(.open1, .open2) .ptl-company .creators-table-box-count {
+  min-width: 0;
+}
+
+.pricing-popup-top-left-head-txt {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pricing-popup-company {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pricing-popup-company-logo {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  object-fit: cover;
+  border-radius: 50%;
 }

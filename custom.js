@@ -210,10 +210,13 @@ const TraderDetailModal = {
         : typeof user.country === "string"
           ? user.country
           : "";
-    //console.log(user.team);
-    const teamName = creator
-      ? user.company?.name || ""
-      : user.team?.name || "No team";
+    // Company belongs to the clicked leaderboard row, not the details response.
+    const companySource = fallbackItem || {};
+    const companyName = getCompanyName(companySource);
+    const companyLogo = getProfileImageUrl(
+      companySource.company?.image_url,
+      companySource.company_image_url,
+    );
     const isFinale =
       user.status === "finale" ||
       user.status === "in_finale_position" ||
@@ -308,11 +311,11 @@ const TraderDetailModal = {
 `;
 
     function getFlag(code) {
-      const c = code && typeof code === "object" ? code.code : code;
-      if (c === null || c === undefined || c === "" || c === "not_found") {
-        return `https://cdn.prod.website-files.com/679b064a680c614548672a06/6a0ebe338a52bf133f218a73_Vector.svg`;
-      }
-      return `https://flagcdn.com/${String(c).toLowerCase().trim()}.svg`;
+      const raw = code && typeof code === "object" ? code.code : code;
+      const normalized = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+      return /^[a-z]{2}$/.test(normalized)
+        ? `https://flagcdn.com/${normalized}.svg`
+        : PTL_CONFIG.fallbackImageUrl;
     }
 
     const matchUser = currentMatch.user || {};
@@ -430,9 +433,9 @@ const TraderDetailModal = {
     }
 
     const flagImgUrl = creator
-      ? user.image_url || user.company?.image_url || getFlag(user.country)
+      ? getProfileImageUrl(user.image_url, user.company?.image_url)
       : getFlag(user.country);
-    const flagHtml = `<img src="${escapeHtml(flagImgUrl)}" loading="lazy" sizes="100vw" alt="${escapeHtml(countryName)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+    const flagHtml = `<img src="${escapeHtml(flagImgUrl)}" data-ptl-image-fallback loading="lazy" sizes="100vw" alt="${escapeHtml(countryName)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
 
     const matchRowsHTML = this.generateMatchRows(matchHistory, apiConfig.id);
 
@@ -456,7 +459,15 @@ ${flagHtml}
       : ""
   }
 </div>
-<div class="pricing-popup-top-left-head-txt">${escapeHtml(countryName)}${countryName && teamName ? " · " : ""}${escapeHtml(teamName)} · ${escapeHtml(leagueName)}</div>
+<div class="pricing-popup-top-left-head-txt${companyName === "-" ? " no-team" : ""}">
+<span class="pricing-popup-team-label">Team:</span>
+${companyName !== "-" ? `
+<span class="pricing-popup-company">
+<img src="${escapeHtml(companyLogo)}" alt="" width="24" height="24" class="pricing-popup-company-logo" data-ptl-image-fallback>
+<span>${escapeHtml(companyName)}</span>
+</span>
+` : "No team"}
+</div>
 </div>
 </div>
 </div>
@@ -522,7 +533,7 @@ ${liveMatchHeaderHTML}
       <div class="ptl-live-trade-card-top">
         <div class="ptl-live-trade-card-cuntr-outr">
           <div class="ptl-live-trade-card-cuntr">
-            <img src="${youFlag}" loading="lazy" alt="${escapeHtml(youCountryName)}" class="ptl-live-trade-card-cuntr-flag" style="object-fit: cover;">
+            <img src="${escapeHtml(youFlag)}" data-ptl-image-fallback loading="lazy" alt="${escapeHtml(youCountryName)}" class="ptl-live-trade-card-cuntr-flag" style="object-fit: cover;">
           </div>
         </div>
         <div class="ptl-live-trade-card-top-cont">
@@ -554,7 +565,7 @@ ${liveMatchHeaderHTML}
         </div>
         <div class="ptl-live-trade-card-cuntr-outr right">
           <div class="ptl-live-trade-card-cuntr">
-            <img src="${oppFlag}" loading="lazy" alt="${escapeHtml(oppCountryName)}" class="ptl-live-trade-card-cuntr-flag" style="object-fit: cover;">
+            <img src="${escapeHtml(oppFlag)}" data-ptl-image-fallback loading="lazy" alt="${escapeHtml(oppCountryName)}" class="ptl-live-trade-card-cuntr-flag" style="object-fit: cover;">
           </div>
         </div>
       </div>
@@ -820,39 +831,9 @@ const PTL_CONFIG = {
   sectionId: "ptl-leaderboard",
   defaultTabIndex: 0,
   pageSize: 10,
-  filters: {
-    rank: {
-      label: "Rank",
-      options: [
-        { value: "all", label: "All" },
-        {
-          value: "upto500",
-          label: "Up to 500",
-          start_rank: 1,
-          end_rank: 500,
-        },
-        {
-          value: "above500",
-          label: "Above 500",
-          start_rank: 501,
-        },
-      ],
-    },
-    status: {
-      label: "Status",
-      apiParam: "status",
-      options: [
-        { value: "all", label: "All Players" },
-        { value: "active", label: "Active Players only" },
-        // { value: "inactive", label: "Inactive Players only" },
-        {
-          value: "eliminated",
-          label: "Eliminated Players only",
-        },
-      ],
-      aliases: { advancing: "active" },
-    },
-  },
+  // Used when a country flag, user image, or company image is unavailable.
+  fallbackImageUrl:
+    "https://cdn.prod.website-files.com/6a981ac8d7b7736a6a02b0a1/6a9939ae5de5151dfcda15f5_6a84628529744886a578d5b9_icon.png",
   starIconUrl:
     "https://cdn.prod.website-files.com/679b064a680c614548672a06/6aabc95eb50f16dab6ba9304_yell-star.svg",
   enableTraderModal: true,
@@ -890,6 +871,51 @@ const PTL_CONFIG = {
       usePagination: true,
       pageSize: 10,
       showSearch: true,
+      filters: {
+        rank: {
+          label: "Rank",
+          options: [
+            { value: "all", label: "All" },
+            {
+              value: "upto500",
+              label: "Up to 500",
+              start_rank: 1,
+              end_rank: 500,
+            },
+            {
+              value: "above500",
+              label: "Above 500",
+              start_rank: 501,
+            },
+          ],
+        },
+        status: {
+          label: "Status",
+          apiParam: "status",
+          options: [
+            { value: "all", label: "All Players" },
+            { value: "active", label: "Active Players only" },
+            {
+              value: "eliminated",
+              label: "Eliminated Players only",
+            },
+          ],
+          aliases: { advancing: "active" },
+        },
+        company: {
+          label: "Company",
+          apiParam: "company_id", // Send the selected team ID, not its display name.
+          // Demo team IDs: replace values with actual API team IDs; labels are display names.
+          options: [
+            { value: "all", label: "All" },
+            { value: "42", label: "EsfandTV's Trading Co" },
+            { value: "102", label: "Tminnzy's Trading Co" },
+            { value: "103", label: "Arteezy's Trading Co" },
+            { value: "104", label: "Frodan's Trading Co" },
+          ],
+        },
+      },
+
       data: null,
       pagination: null,
       loaded: false,
@@ -922,7 +948,7 @@ const PTL_CONFIG = {
         typeof PTL_DEMO_DATA !== "undefined"
           ? PTL_DEMO_DATA.creator_league_2_individual_data
           : null,
-      coming_soon: false, // Toggle switch: true = show Coming Soon box, false = show normal table
+      coming_soon: true, // Toggle switch: true = show Coming Soon box, false = show normal table
       coming_soon_title: "Coming Soon",
       coming_soon_desc: "The game will begins on 26th October",
       use_api: true, // Toggle switch: true = API, false = static demo data
@@ -930,6 +956,48 @@ const PTL_CONFIG = {
       usePagination: true,
       pageSize: 10,
       showSearch: true,
+      filters: {
+        rank: {
+          label: "Rank",
+          options: [
+            { value: "all", label: "All" },
+            {
+              value: "upto500",
+              label: "Up to 500",
+              start_rank: 1,
+              end_rank: 500,
+            },
+            {
+              value: "above500",
+              label: "Above 500",
+              start_rank: 501,
+            },
+          ],
+        },
+        status: {
+          label: "Status",
+          apiParam: "status",
+          options: [
+            { value: "all", label: "All Players" },
+            { value: "active", label: "Active Players only" },
+            { value: "eliminated", label: "Eliminated Players only" },
+            { value: "forfeited", label: "Forfeited Players only" },
+          ],
+          aliases: { advancing: "active" },
+        },
+        company: {
+          label: "Company",
+          apiParam: "team_id", // Send the selected team ID, not its display name.
+          // Demo team IDs: replace values with actual API team IDs; labels are display names.
+          options: [
+            { value: "all", label: "All" },
+            { value: "101", label: "Demo Trading Co" },
+            { value: "102", label: "Demo Capital" },
+            { value: "103", label: "Demo Markets" },
+          ],
+        },
+      },
+
       data: null,
       pagination: null,
       loaded: false,
@@ -959,7 +1027,7 @@ const PTL_CONFIG = {
       enableNameClick: true,
       enableTraderModal: true,
       highlightRowCount: 8,
-      show_highlight: false,
+      show_highlight: true,
       ap_url: `${API_BASE_URL}/app/v1/journal/ptl/creator/leaderboard/public/`,
       demo_data:
         typeof PTL_DEMO_DATA !== "undefined"
@@ -973,6 +1041,7 @@ const PTL_CONFIG = {
       is_live: true,
       usePagination: false,
       showSearch: false,
+      filters: null, // Creator has no filters
       data: null,
       pagination: null,
       loaded: false,
@@ -982,6 +1051,37 @@ const PTL_CONFIG = {
     },
   },
 };
+
+function getCompanyName(item) {
+  const sources = [
+    typeof item.company === "string" ? item.company : item.company?.name,
+    item.company_name,
+  ];
+  return sources.find((name) =>
+    typeof name === "string" && name.trim() &&
+    !["-", "not_found", "null", "undefined"].includes(name.trim().toLowerCase())
+  )?.trim() || "-";
+}
+
+function getProfileImageUrl(...sources) {
+  return sources.find((source) =>
+    typeof source === "string" && source.trim() &&
+    !["not_found", "null", "undefined"].includes(source.trim().toLowerCase())
+  )?.trim() || PTL_CONFIG.fallbackImageUrl;
+}
+
+function initImageFallbacks() {
+  document.addEventListener("error", (event) => {
+    const image = event.target;
+    if (!(image instanceof HTMLImageElement) ||
+        !image.hasAttribute("data-ptl-image-fallback")) return;
+    // Remove the marker first so a failed fallback cannot trigger a retry loop.
+    image.removeAttribute("data-ptl-image-fallback");
+    if (image.getAttribute("src") !== PTL_CONFIG.fallbackImageUrl) {
+      image.src = PTL_CONFIG.fallbackImageUrl;
+    }
+  }, true);
+}
 
 function isApiEnabled(apiConfig) {
   if (!apiConfig) return Boolean(PTL_CONFIG.use_api !== false);
@@ -999,10 +1099,18 @@ function isComingSoon(apiConfig) {
 const state = {
   activeTabIndex:
     PTL_CONFIG.defaultTabIndex !== undefined ? PTL_CONFIG.defaultTabIndex : 0,
-  searchQuery: "",
+  searchByTab: { 0: "", 1: "" },
+  get searchQuery() {
+    return this.searchByTab[this.activeTabIndex] || "";
+  },
+  set searchQuery(value) {
+    if (PTL_CONFIG.apis[this.activeTabIndex]?.showSearch) {
+      this.searchByTab[this.activeTabIndex] = value;
+    }
+  },
   filtersByTab: {
-    0: { rank: "all", status: "all" },
-    1: { rank: "all", status: "all" },
+    0: { rank: "all", status: "all", company: "all" },
+    1: { rank: "all", status: "all", company: "all" },
   },
   currentPageByTab: {
     0: 1,
@@ -1302,6 +1410,11 @@ function createRowHTML(item, globalIndex, tabIndex, pageIndex) {
     item.trader_name ||
     item.name;
   const traderName = rawTraderName ? String(rawTraderName).trim() : "-";
+  const companyName = getCompanyName(item);
+  const companyLogo = getProfileImageUrl(
+    item.company?.image_url,
+    item.company_image_url,
+  );
   const userId =
     item.user_id !== undefined && item.user_id !== null
       ? item.user_id
@@ -1428,12 +1541,22 @@ function createRowHTML(item, globalIndex, tabIndex, pageIndex) {
 <div class="creators-table-box">
 ${
   isClickable
-    ? `<a href="#" class="creators-table-box-count bg-font" userid="${escapeHtml(userId)}" data-userid="${escapeHtml(userId)}">${escapeHtml(traderName)}</a>`
+    ? `<a href="#" class="creators-table-box-count bg-font" data-userid="${escapeHtml(userId)}">${escapeHtml(traderName)}</a>`
     : `<span class="creators-table-box-count bg-font">${escapeHtml(traderName)}</span>`
 }
 ${supportersHTML}
 </div>
 </div>
+${!isCreatorTable ? `
+<div class="creators-table-col company">
+<div class="creators-table-box">
+<div class="ptl-company">
+${companyName !== "-" ? `<img src="${escapeHtml(companyLogo)}" alt="" loading="lazy" width="28" height="28" class="ptl-company-logo" data-ptl-image-fallback>` : ""}
+<span class="creators-table-box-count bg-font">${escapeHtml(companyName)}</span>
+</div>
+</div>
+</div>
+` : ""}
 <div class="creators-table-col points">
 <div class="creators-table-box head">
 <div class="creators-table-box-count bg-font ${pointsClass}">${escapeHtml(pointsDisplay)}</div>
@@ -1816,6 +1939,20 @@ function setTableLeagueClass(container, config) {
     table.classList.add(leagueClass);
   }
 
+  const traderHeader = table.querySelector(
+    ".creators-table-head .creators-table-col.trader",
+  );
+  const companyHeader = table.querySelector(
+    ".creators-table-head .creators-table-col.company",
+  );
+  if (["open1", "open2"].includes(leagueClass) && !companyHeader) {
+    traderHeader?.insertAdjacentHTML("afterend", `
+<div class="creators-table-col company"><div class="creators-table-box head"><div class="creators-table-box-txt">Company</div></div></div>
+`);
+  } else if (leagueClass === "creator" && companyHeader) {
+    companyHeader.remove();
+  }
+
   const header = table.querySelector(
     ".creators-table-head .creators-table-col.points .creators-table-box-txt",
   );
@@ -1867,24 +2004,33 @@ function getLeaderboardFilters(config) {
     state.filtersByTab[tabIndex] || {
       rank: "all",
       status: "all",
+      company: "all",
     }
   );
 }
 
 function getFilterOptions(config) {
+  if (!config?.filters) return {};
   const filters = getLeaderboardFilters(config);
-  const rank = PTL_CONFIG.filters.rank.options.find(
+  const rank = config.filters.rank?.options.find(
     (option) => option.value === filters.rank,
   );
   return {
     ...(rank?.start_rank !== undefined ? { start_rank: rank.start_rank } : {}),
     ...(rank?.end_rank !== undefined ? { end_rank: rank.end_rank } : {}),
-    ...(filters.status !== "all" ? { status: filters.status } : {}),
+    ...(config.filters.status && filters.status !== "all"
+      ? { status: filters.status } : {}),
+    ...(config.filters.company && filters.company && filters.company !== "all"
+      ? { team_id: filters.company } : {}),
   };
 }
 
 function matchesLeaderboardFilters(item, config) {
   const options = getFilterOptions(config);
+  if (options.team_id) {
+    const teamId = item.team_id ?? item.team?.id ?? item.company?.id;
+    if (teamId == null || String(teamId) !== String(options.team_id)) return false;
+  }
   const rank = Number(item.rank);
   if (options.start_rank !== undefined && !(rank >= options.start_rank))
     return false;
@@ -1894,7 +2040,7 @@ function matchesLeaderboardFilters(item, config) {
     const rawStatus = String(item.status || "")
       .trim()
       .toLowerCase();
-    const status = PTL_CONFIG.filters.status.aliases[rawStatus] || rawStatus;
+    const status = config.filters.status.aliases?.[rawStatus] || rawStatus;
     if (status !== options.status) return false;
   }
   return true;
@@ -1914,9 +2060,11 @@ function initLeaderboardFilters(leaderboardEl, searchWrp) {
     filters.className = "ptl-leaderboard-filters";
     toolbar.appendChild(filters);
   }
-  if (filters.ptlFiltersBound) return toolbar;
+  const config = PTL_CONFIG.apis[state.activeTabIndex];
+  if (filters.ptlFiltersConfig === config) return toolbar;
+  filters.ptlFiltersConfig = config;
   // Always populate from configuration, replacing any saved dropdown markup.
-  filters.innerHTML = Object.entries(PTL_CONFIG.filters)
+  filters.innerHTML = Object.entries(config?.filters || {})
     .map(
       ([key, filter]) => `
 <div class="ptl-filter" data-filter="${key}">
@@ -2002,10 +2150,12 @@ ${filter.options.map((option) => `<li class="ptl-filter-option" role="option" ta
       if (!dropdown.contains(event.relatedTarget)) closeAll();
     });
   });
-  document.addEventListener("click", (event) => {
-    if (!filters.contains(event.target)) closeAll();
-  });
-  filters.ptlFiltersBound = true;
+  if (!filters.ptlFiltersBound) {
+    document.addEventListener("click", (event) => {
+      if (!filters.contains(event.target)) closeAll();
+    });
+    filters.ptlFiltersBound = true;
+  }
   return toolbar;
 }
 
@@ -2057,12 +2207,12 @@ function updateSearchVisibility(leaderboardEl, config) {
   const searchInput = leaderboardEl.querySelector(".input-search");
   const isComingSoonActive = isComingSoon(config);
   const isSearchConfigured = Boolean(
-    config && config.showSearch !== false && !isComingSoonActive,
+    config && config.id !== "creator_league_2" && config.showSearch !== false && !isComingSoonActive,
   );
   const toolbar = leaderboardEl.querySelector(".ptl-leaderboard-controls");
   const filters = toolbar.querySelector(".ptl-leaderboard-filters");
   const showFilters = Boolean(
-    config && ["open1", "open2"].includes(config.id) && !isComingSoonActive,
+    config?.filters && !isComingSoonActive,
   );
   toolbar.hidden = !isSearchConfigured && !showFilters;
   filters.hidden = !showFilters;
@@ -2070,10 +2220,10 @@ function updateSearchVisibility(leaderboardEl, config) {
   filters.querySelectorAll(".ptl-filter").forEach((dropdown) => {
     const key = dropdown.dataset.filter;
     const selected = selectedFilters[key];
-    const option = PTL_CONFIG.filters[key].options.find(
+    const option = config.filters[key].options.find(
       (item) => item.value === selected,
     );
-    dropdown.querySelector(".ptl-filter-value").textContent = option.label;
+    dropdown.querySelector(".ptl-filter-value").textContent = option?.label || "All";
     dropdown.querySelector("button").setAttribute("aria-expanded", "false");
     dropdown.querySelector("ul").hidden = true;
     dropdown.querySelectorAll("li").forEach((item) => {
@@ -2087,10 +2237,10 @@ function updateSearchVisibility(leaderboardEl, config) {
   if (searchWrp) {
     if (isSearchConfigured) {
       searchWrp.classList.add("is-visible");
+      if (searchInput) searchInput.value = state.searchQuery;
     } else {
       searchWrp.classList.remove("is-visible");
       if (!isSearchConfigured) {
-        state.searchQuery = "";
         if (searchInput) searchInput.value = "";
       }
     }
@@ -2220,9 +2370,14 @@ async function resolveSourceData(
         }
         if (options.status) {
           parsedUrl.searchParams.set(
-            PTL_CONFIG.filters.status.apiParam,
+            config.filters.status.apiParam,
             options.status,
           );
+        }
+        if (config.filters?.company) {
+          const companyParam = config.filters.company.apiParam;
+          if (options.team_id) parsedUrl.searchParams.set(companyParam, options.team_id);
+          else parsedUrl.searchParams.delete(companyParam);
         }
         endpointUrl = parsedUrl.toString();
       } catch (e) {
@@ -2251,7 +2406,12 @@ async function resolveSourceData(
         }
         if (options.status) {
           params.push(
-            `${encodeURIComponent(PTL_CONFIG.filters.status.apiParam)}=${encodeURIComponent(options.status)}`,
+            `${encodeURIComponent(config.filters.status.apiParam)}=${encodeURIComponent(options.status)}`,
+          );
+        }
+        if (options.team_id && config.filters?.company) {
+          params.push(
+            `${encodeURIComponent(config.filters.company.apiParam)}=${encodeURIComponent(options.team_id)}`,
           );
         }
         const separator = trimmed.includes("?") ? "&" : "?";
@@ -2351,7 +2511,9 @@ async function loadTabData(
       : state.currentPageByTab[tabIndex] || 1;
   state.currentPageByTab[tabIndex] = targetPage;
   const targetSearch =
-    searchQuery !== null ? searchQuery : state.searchQuery || "";
+    config.showSearch && config.id !== "creator_league_2"
+      ? (searchQuery !== null ? searchQuery : state.searchByTab[tabIndex] || "")
+      : "";
   const filterOptions = getFilterOptions(config);
   const filterKey = JSON.stringify(filterOptions);
 
@@ -2443,7 +2605,8 @@ function renderActiveTab(tabIndex) {
     config.pagination &&
     typeof config.pagination.total_pages === "number",
   );
-  const query = state.searchQuery.trim().toLowerCase();
+  const query = config.showSearch && config.id !== "creator_league_2"
+    ? (state.searchByTab[tabIndex] || "").trim().toLowerCase() : "";
   const searchedResults = query
     ? allResults.filter((item) => {
         const name = (
@@ -2510,11 +2673,9 @@ function renderActiveTab(tabIndex) {
             e.preventDefault();
             const rowIdx = parseInt(cell.getAttribute("data-row-idx"), 10);
             const item = filteredResults[rowIdx];
-            const anchor = cell.querySelector("a[userid], a[data-userid]");
+            const anchor = cell.querySelector("a[data-userid]");
             const userId =
-              (anchor &&
-                (anchor.getAttribute("userid") ||
-                  anchor.getAttribute("data-userid"))) ||
+              anchor?.dataset.userid ||
               (item &&
                 (item.user_id !== undefined
                   ? item.user_id
@@ -2586,11 +2747,9 @@ function renderActiveTab(tabIndex) {
         e.preventDefault();
         const rowIdx = parseInt(cell.getAttribute("data-row-idx"), 10);
         const item = pageItems[rowIdx];
-        const anchor = cell.querySelector("a[userid], a[data-userid]");
+        const anchor = cell.querySelector("a[data-userid]");
         const userId =
-          (anchor &&
-            (anchor.getAttribute("userid") ||
-              anchor.getAttribute("data-userid"))) ||
+          anchor?.dataset.userid ||
           (item &&
             (item.user_id !== undefined
               ? item.user_id
@@ -2615,22 +2774,6 @@ function renderActiveTab(tabIndex) {
   updateSearchVisibility(leaderboardEl, config);
 }
 
-function resetTableSearch(tabIndex) {
-  state.searchQuery = "";
-  Object.values(state.filtersByTab).forEach((filters) => {
-    filters.rank = "all";
-    filters.status = "all";
-  });
-  state.currentPageByTab[tabIndex] = 1;
-  // Ignore pending responses for the search/filter selection being cleared.
-  Object.values(PTL_CONFIG.apis).forEach((config) => {
-    config.requestId = (config.requestId || 0) + 1;
-  });
-  const searchInput = document
-    .getElementById(PTL_CONFIG.sectionId)
-    ?.querySelector(".input-search");
-  if (searchInput) searchInput.value = "";
-}
 
 function initTabs() {
   const leaderboardEl = document.getElementById(PTL_CONFIG.sectionId);
@@ -2703,7 +2846,6 @@ function initTabs() {
       if (state.activeTabIndex === index && PTL_CONFIG.apis[index].loaded)
         return;
 
-      if (state.activeTabIndex !== index) resetTableSearch(index);
       state.activeTabIndex = index;
 
       tabButtons.forEach((b, i) => {
@@ -2738,6 +2880,8 @@ function initSearch() {
   searchInput.dataset.searchBound = "true";
 
   const executeSearch = (query) => {
+    if (!PTL_CONFIG.apis[state.activeTabIndex]?.showSearch ||
+        PTL_CONFIG.apis[state.activeTabIndex].id === "creator_league_2") return;
     const sanitized = sanitizeInput(query);
     state.searchQuery =
       sanitized !== undefined && sanitized !== null
@@ -2821,7 +2965,6 @@ window.PTLLeaderboard = {
     const idx = parseInt(tabIndex, 10);
     if (PTL_CONFIG.apis[idx]) {
       PTL_CONFIG.defaultTabIndex = idx;
-      if (state.activeTabIndex !== idx) resetTableSearch(idx);
       state.activeTabIndex = idx;
       initTabs();
       updateSearchVisibility(
@@ -2834,7 +2977,8 @@ window.PTLLeaderboard = {
 
   setSearch: function (tabIndex, enabled) {
     if (PTL_CONFIG.apis[tabIndex]) {
-      PTL_CONFIG.apis[tabIndex].showSearch = !!enabled;
+      PTL_CONFIG.apis[tabIndex].showSearch =
+        PTL_CONFIG.apis[tabIndex].id !== "creator_league_2" && !!enabled;
       if (state.activeTabIndex === tabIndex) {
         const leaderboardEl = document.getElementById(PTL_CONFIG.sectionId);
         updateSearchVisibility(leaderboardEl, PTL_CONFIG.apis[tabIndex]);
@@ -3055,6 +3199,7 @@ function initLeaderboardTooltips() {
 }
 
 function init() {
+  initImageFallbacks();
   initLeaderboardTooltips();
   initTabs();
   initSearch();
